@@ -14,21 +14,7 @@
 # builds on the x86 platform.
 name: build_x86
 
-on:
-  # Run this workflow once every 6 hours against the master branch
-  schedule:
-   - cron: "0 */6 * * *"
-
-  push:
-    branches:
-      - 'master'
-
-    tags:
-      - '*'
-
-  pull_request:
-    branches:
-      - '*'
+on: workflow_dispatch
 
 # Cancel old jobs of a PR if a new job is started.
 # Fallback on using the run id if it's not a PR, which is unique, so no job canceling.
