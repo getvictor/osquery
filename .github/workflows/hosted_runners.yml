@@ -172,7 +172,7 @@ jobs:
         fetch-depth: 0
 
     - name: Update the cache (git submodules)
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ${{ steps.build_paths.outputs.SOURCE }}/.git/modules
 
@@ -353,7 +353,7 @@ jobs:
         git checkout ${{ env.PACKAGING_COMMIT }}
 
     - name: Update the cache (ccache)
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ${{ steps.build_paths.outputs.CCACHE }}
 
@@ -364,7 +364,7 @@ jobs:
           ccache_${{ matrix.os }}_${{ matrix.build_type }}
 
     - name: Update the cache (git submodules)
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ${{ steps.build_paths.outputs.SOURCE }}/.git/modules
 
@@ -578,7 +578,7 @@ jobs:
         echo "PACKAGE_BUILD=$(pwd)/${rel_package_build_path}" >> $GITHUB_OUTPUT
 
     - name: Clone the osquery repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
         path: ${{ steps.build_paths.outputs.REL_SOURCE }}
@@ -592,7 +592,7 @@ jobs:
         vm_stat
 
     - name: Update the cache (ccache)
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ${{ steps.build_paths.outputs.CCACHE }}
 
@@ -603,7 +603,7 @@ jobs:
           ccache_${{ matrix.os }}_${{ matrix.architecture }}_${{ matrix.build_type }}
 
     - name: Update the cache (git submodules)
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ${{ steps.build_paths.outputs.SOURCE }}/.git/modules
 
@@ -614,7 +614,7 @@ jobs:
           gitmodules_${{ matrix.os }}_${{ matrix.architecture }}_${{env.SUBMODULE_CACHE_VERSION}}
 
     - name: Update the cache (downloads)
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ${{ steps.build_paths.outputs.DOWNLOADS }}
 
@@ -802,7 +802,7 @@ jobs:
 
     steps:
       - name: Clone the osquery repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -866,7 +866,7 @@ jobs:
 
     steps:
       - name: Clone the osquery repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
@@ -980,12 +980,14 @@ jobs:
         $rel_install_path = "w\install"
         $rel_package_data_path = "w\package_data"
         $rel_packaging_path = "w\osquery-packaging"
+        $rel_packaging_build = "w\package-build"
 
         New-Item -ItemType Directory -Force -Path $rel_build_path
         New-Item -ItemType Directory -Force -Path $rel_sccache_path
         New-Item -ItemType Directory -Force -Path $rel_downloads_path
         New-Item -ItemType Directory -Force -Path $rel_install_path
         New-Item -ItemType Directory -Force -Path $rel_package_data_path
+        New-Item -ItemType Directory -Force -Path $rel_packaging_build
 
         $base_dir = (Get-Item .).FullName
 
@@ -997,6 +999,7 @@ jobs:
         echo "INSTALL=$base_dir\$rel_install_path" >> $env:GITHUB_OUTPUT
         echo "PACKAGING=$base_dir\$rel_packaging_path" >> $env:GITHUB_OUTPUT
         echo "PACKAGE_DATA=$base_dir\$rel_package_data_path" >> $env:GITHUB_OUTPUT
+        echo "PACKAGE_BUILD=$base_dir\$rel_packaging_build" >> $env:GITHUB_OUTPUT
 
     - name: Setup the VC arch
       shell: powershell
@@ -1019,7 +1022,7 @@ jobs:
         git config --global core.symlinks true
 
     - name: Clone the osquery repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
         path: ${{ steps.build_paths.outputs.REL_SOURCE }}
@@ -1049,7 +1052,7 @@ jobs:
         git checkout ${{ env.PACKAGING_COMMIT }}
 
     - name: Update the cache (git submodules)
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ${{ steps.build_paths.outputs.SOURCE }}\.git\modules
 
@@ -1060,7 +1063,7 @@ jobs:
           gitmodules_${{ matrix.os }}_${{env.SUBMODULE_CACHE_VERSION}}
 
     - name: Update the cache (downloads)
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ${{ steps.build_paths.outputs.DOWNLOADS }}
 
@@ -1071,7 +1074,7 @@ jobs:
           downloads_${{ matrix.os }}
 
     - name: Initialize the Python 3 installation
-      uses: actions/setup-python@v2
+      uses: actions/setup-python@v5
       with:
         python-version: "3.x"
         architecture: "x64"
@@ -1228,7 +1231,7 @@ jobs:
         echo "COMPILER_VERSION=$version" >> $env:GITHUB_OUTPUT
 
     - name: Update the cache (sccache)
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ${{ steps.build_paths.outputs.SCCACHE }}
 
@@ -1284,13 +1287,12 @@ jobs:
         cmake --build . --target install -j 3
 
     - name: Create the packages
+      working-directory: ${{ steps.build_paths.outputs.PACKAGE_BUILD }}
       shell: cmd
 
       run: |
         call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" ${{ steps.vc_arch.outputs.VC_ARCH }}
         @echo on
-
-        cd ${{ steps.build_paths.outputs.PACKAGE_BUILD }}
 
         7z ^
           a windows_package_data.zip ^
@@ -1334,13 +1336,12 @@ jobs:
         if %errorlevel% neq 0 exit /b %errorlevel%
 
     - name: Locate the packages
-      working-directory: ${{ steps.build_paths.outputs.PACKAGE_BUILD }}
       id: packages
-      shell: bash
+      shell: powershell
       run: |
-        echo "REL_UNSIGNED_RELEASE_PACKAGE_DATA_PATH=$(ls *.zip)" >> $GITHUB_OUTPUT
-        echo "REL_UNSIGNED_RELEASE_MSI_PATH=$(ls *.msi)" >> $GITHUB_OUTPUT
-        echo "REL_UNSIGNED_RELEASE_NUPKG_PATH=$(ls *.nupkg)" >> $GITHUB_OUTPUT
+        echo "REL_UNSIGNED_RELEASE_PACKAGE_DATA_PATH=$((ls ${{ steps.build_paths.outputs.PACKAGE_BUILD }}\*.zip).FullName)" >> $env:GITHUB_OUTPUT
+        echo "REL_UNSIGNED_RELEASE_MSI_PATH=$((ls ${{ steps.build_paths.outputs.PACKAGE_BUILD }}\*.msi).FullName)" >> $env:GITHUB_OUTPUT
+        echo "REL_UNSIGNED_RELEASE_NUPKG_PATH=$((ls ${{ steps.build_paths.outputs.PACKAGE_BUILD }}\*.nupkg).FullName)" >> $env:GITHUB_OUTPUT
 
     - name: Store the unsigned release package data artifact
       uses: actions/upload-artifact@v4.4.0
