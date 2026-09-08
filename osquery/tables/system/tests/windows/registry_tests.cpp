@@ -206,6 +206,8 @@ TEST_F(RegistryTablesTest, test_get_username_from_key) {
 
   status = getUsernameFromKey("HKEY_USERS\\S-1-5-19\\Some\\Key", username);
   EXPECT_TRUE(status.ok());
+  status = getUsernameFromKey("hkey_users\\S-1-5-19\\Some\\Key", username);
+  EXPECT_TRUE(status.ok());
   for (const auto& key : badKeys) {
     status = getUsernameFromKey(key, username);
     EXPECT_FALSE(status.ok());
@@ -291,6 +293,23 @@ TEST_F(RegistryTablesTest, test_registry_name_and_path_are_case_insensitive) {
                   kCurrentVersionKey + kRegSep + loweredName + "\"");
   ASSERT_EQ(pathResults.rows().size(), std::size_t{1});
   EXPECT_EQ(pathResults.rows()[0].at("path"), entry->at("path"));
+}
+
+TEST_F(RegistryTablesTest, test_registry_hive_is_case_insensitive) {
+  // The hive has its own lookup, so it needs its own coverage.
+  QueryData canonical;
+  auto ret = queryKey(kTestKey, canonical);
+  ASSERT_TRUE(ret.ok());
+  ASSERT_FALSE(canonical.empty());
+
+  QueryData lowercasedHive;
+  ret = queryKey("hkey_local_machine" + kRegSep + "SOFTWARE", lowercasedHive);
+  ASSERT_TRUE(ret.ok());
+  EXPECT_EQ(lowercasedHive.size(), canonical.size());
+
+  SQL results("select * from registry where key = \"hkey_local_machine" +
+              kRegSep + "SOFTWARE\"");
+  EXPECT_FALSE(results.rows().empty());
 }
 } // namespace tables
 } // namespace osquery
