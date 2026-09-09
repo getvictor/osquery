@@ -283,14 +283,18 @@ TEST_F(RegistryTablesTest, test_registry_name_and_path_are_case_insensitive) {
       });
   ASSERT_NE(entry, baseline.rows().end());
   const auto loweredName = boost::to_lower_copy(entry->at("name"));
+  // A subkey and a value may share a name, and then also a path, so pin the
+  // row by type as well.
+  const auto typeClause = " and type = \"" + entry->at("type") + "\"";
 
   SQL nameResults("select * from registry where key = \"" + kCurrentVersionKey +
-                  "\" and name = \"" + loweredName + "\"");
+                  "\" and name = \"" + loweredName + "\"" + typeClause);
   ASSERT_EQ(nameResults.rows().size(), std::size_t{1});
   EXPECT_EQ(nameResults.rows()[0].at("name"), entry->at("name"));
 
   SQL pathResults("select * from registry where path = \"" +
-                  kCurrentVersionKey + kRegSep + loweredName + "\"");
+                  kCurrentVersionKey + kRegSep + loweredName + "\"" +
+                  typeClause);
   ASSERT_EQ(pathResults.rows().size(), std::size_t{1});
   EXPECT_EQ(pathResults.rows()[0].at("path"), entry->at("path"));
 }
